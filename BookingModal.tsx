@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Bot, Mail, CheckCircle, Loader2, MessageSquare, Sparkles } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -44,6 +43,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
     setIsTyping(true);
 
     try {
+      // Create a new instance right before use per SDK guidelines
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -86,12 +86,13 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
         }
       });
 
-      const parts = response.candidates?.[0]?.content?.parts || [];
-      const functionCall = parts.find(p => p.functionCall);
-      const textResponse = parts.find(p => p.text)?.text;
+      // Use the recommended SDK properties for cleaner response parsing (response.functionCalls and response.text)
+      const fCalls = response.functionCalls;
+      const textResponse = response.text;
       
-      if (functionCall) {
-        const { needSummary } = functionCall.functionCall.args as any;
+      if (fCalls && fCalls.length > 0) {
+        // Extract args from the first function call directly using the SDK's recommended access method
+        const { needSummary } = fCalls[0].args as any;
         setSummary(cleanText(needSummary));
         setIsSent(true);
         setMessages(prev => [...prev, { 
@@ -99,6 +100,7 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose }) => {
           content: "Excellent. I have formatted our discussion into an executive brief and dispatched it to our human partners. You can expect a direct follow-up shortly." 
         }]);
       } else if (textResponse) {
+        // Use text response directly from the candidates' processed property
         setMessages(prev => [...prev, { role: 'assistant', content: cleanText(textResponse) }]);
       }
     } catch (error) {
